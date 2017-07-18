@@ -1,0 +1,30 @@
+attr global userattr DbLogExclude DbLogInclude cmdIcon devStateIcon devStateStyle genericDeviceType:security,ignore,switch,outlet,light,blind,thermometer,thermostat,contact,garage,window,lock homebridgeMapping:textField-long icon sortby webCmd widgetOverride
+attr global autoload_undefined_devices 1
+attr global logfile -
+attr global modpath .
+attr global motd none
+attr global sendStatistics onUpdate
+attr global statefile ./log/fhem.save
+attr global updateInBackground 0
+attr global verbose 2
+attr global nofork 1
+attr global perlSyntaxCheck 1
+
+define telnetPort telnet 7072 global
+
+define WEB FHEMWEB 8083 global
+
+# Fake FileLog entry, to access the fhem log from FHEMWEB
+define Logfile FileLog ./log/fhem-%Y-%m.log fakelog
+
+define autocreate autocreate
+attr autocreate filelog ./log/%NAME-%Y.log
+
+define eventTypes eventTypes ./log/eventTypes.txt
+
+# Disable this to avoid looking for new USB devices on startup
+define initialUsbCheck notify global:INITIALIZED usb create
+
+# FHEM updaten und beenden
+define Update notify global:INITIALIZED sleep 2;;update
+define Shutdown notify global:UPDATE sleep 2;;shutdown

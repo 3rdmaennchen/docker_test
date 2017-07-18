@@ -1,0 +1,311 @@
+version: '3'
+
+############################################################################
+# INFO:
+############################################################################
+
+# Services:
+#  portainer
+#  msql-Datenbank (FHEM-Logging)
+#  Debian Jessie zum Spielen
+#  FHEM
+#  FHEM-SONOS
+#  TVheadend mit OSCAM für HDTV (TV>IP)
+
+# Under Construction:
+#  apache2 (letsencrypt/RevProxy/fail2ban/FTP/NFS/homepage)
+#  msql-Datenbank (Filmdatenbank)
+#  FHEM-Alexa
+#  MQTT
+
+# Docker Infos:
+#  privileged --> alle USB Geräte werden übergeben
+
+# USB-Geräte anzeigen
+#  lsusb -v | grep Serial
+#  ls -l /dev/serial/by-id
+
+############################################################################
+# SICHERHEIT & PORTS:
+#############################################################################
+
+# Sicherheitskonzept Netzwerk/Internet:
+# Anfragen über Internet über ReverseProxy und https
+# Interne Umleitung (Netzwerk) auf http
+
+# Modem Portweiterleitung anpassen:
+# alle eingehenden Verbindungen zu ReverseProxy (Port 443) weiter leiten
+# (WebUI von Synology funktioniert noch nicht)
+
+# PORTS:
+#  FHEM
+#    WebUI-http     8083
+#    dvbapi         7072
+#  TVheadend
+#    WebUI-http     9981
+#    htsp IP TV     9982
+#  OSCAM
+#    WebUI-http     8888
+#    dvbapi         9000
+
+############################################################################
+# USER & PASSWÖRTER:
+#############################################################################
+
+# USER:
+# mySQL:
+#  FHEM
+#    User:  fhemuser
+#    Pwd:   fhemuser
+
+# FHEM
+#  USB-Geräte übergeben:
+#    lirc0:   Eingebaute Infrarot-Schnittstelle des Intel NUC
+#    ttyUSB0: GPIOPINs über FIRMATA (Arduino Nano)
+#    ttyUSB1: Jeelink 868,35MHz LaCrosse (Arduino Nano)
+#    ttyUSB2: SIGNALduino 433MHz (Arduino Nano)
+
+# Under Construction:
+#    ttyUSB3: CUL 868MHz
+
+# TVheadend:
+#  Admin
+#    User:  tvhadmin
+#    Pwd:   tvhadmin
+#  User
+#    User:  tvhuser
+#    Pwd:   tvhuser
+#  OSCAM
+#    User:  tvhoscam
+#    Pwd:   tvhoscam
+
+############################################################################
+# NETZWERKE:
+############################################################################
+
+networks:
+    fhem_bridge:
+        driver: bridge
+
+############################################################################
+# VOLUMES:
+############################################################################
+
+volumes:
+
+############################################################################
+# Volumes: TVheadend
+############################################################################
+
+# Wenn man die Config nach aussen mounted, hat man Probleme mit den Rechten
+# Deshalb werden alle Daten in einem Volume gespeichert
+# Nähere Infos siehe TVheadend Dockerfile
+
+    tvh.config:
+        driver: local
+
+    tvh.recordings:
+        driver: local
+
+############################################################################
+# SERVICES:
+############################################################################
+
+services:
+
+############################################################################
+# Service: Apache2
+############################################################################
+
+# Under Construction: (Ich kämpf mich so durch)
+
+# apache2 mit letsencrypt/RevProxy/fail2ban
+# AuthUserFile mit htpasswd erstellen
+# letsencrypt einrichten und auto. Lizens-Update
+# Reverse Proxy konfigurieren
+# fail2ban konfigurieren
+# proftpd einrichten
+
+# FTP:
+#  Kodi Config (Quellen für Filme/Serien/IPTV/Fotos anpassen)
+#  Aufnahmen von TVheadend?
+#  IP-Kamera
+#  Kalender (Abfall/Ich/Du/Familie)
+#  Listen (Einkaufsliste/Aufgabenplanung)
+
+#    apache2:
+#        container_name: apache2
+#        restart: always
+#        expose:
+#            - "443"
+#            - "80"
+#        ports:
+#            - "443:443"
+#            - "80:80"
+#        build: apache2
+#        volumes:
+#            - ./apache2/entrypoint.sh:/entrypoint.sh
+#            - ./apache2/data/html/:/var/www/html/
+#            - ./apache2/data/log/:/var/log/apache2/
+#            - ./apache2/data/config/proxy/sites-available/:/etc/apache2/sites-available/
+#            - ./apache2/data/config/ssl/:/etc/letsencrypt/archive/
+#        network_mode: "bridge"
+
+############################################################################
+# Service: Portainer
+############################################################################
+
+    portainer:
+        container_name: portainer
+        restart: always
+        expose:
+            - "9000"
+        ports:
+            - "9000:9000"
+        image: portainer/portainer
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        network_mode: "bridge"
+
+############################################################################
+# Service: MySQL
+############################################################################
+
+# Kodi DB fehlt noch
+
+    mysql:
+        container_name: mysql
+        restart: always
+        expose:
+            - "3306"
+            - "33060"
+        ports:
+            - "3306:3306"
+            - "33060:33060"
+        image: mysql/mysql-server:latest
+        volumes:
+            - ./mysql/init.sql:/docker-entrypoint-initdb.d/fhem-init.sql
+            - ./mysql/data:/var/lib/mysql
+        environment:
+            - MYSQL_RANDOM_ROOT_PASSWORD=yes
+        networks:
+            - fhem_bridge
+
+############################################################################
+# Service: FHEM SONOS
+############################################################################
+
+# Leider muss das Sonos Perl Modul als host laufen, weil sonst die Lautsprecher
+# nicht erkannt werden (IP Broadcast und Ports).
+# Für eine bessere Lösung wäre ich dankbar.
+
+# In diesem Container ist eine aktuelle FHEM Installation,
+# worin nur das Sonos Perl Modul läuft.
+
+    sonos:
+        container_name: fhem_sonos
+        restart: always
+        build: fhem_sonos
+        volumes:
+            - ./fhem_sonos/entrypoint.sh:/entrypoint.sh
+        hostname: fhem_sonos
+        network_mode: "host"
+
+############################################################################
+# Service: FHEM
+############################################################################
+
+    fhem:
+        container_name: fhem
+        restart: always
+        expose:
+            - "8083"
+            - "7072"
+        ports:
+            - "8083:8083"
+            - "7072:7072"
+        build: fhem
+        devices:
+            - /dev/lirc0:/dev/lirc0
+            - /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_GPIOPINS-if00-port0:/dev/ttyUSB0
+            - /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_LACROSSE-if00-port0:/dev/ttyUSB1
+            - /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_CUL433MH-if00-port0:/dev/ttyUSB2
+#            - /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_CUL868MH-if00-port0:/dev/ttyUSB3
+        volumes:
+            - ./fhem/entrypoint.sh:/entrypoint.sh
+            - ./fhem/log/:/opt/fhem/log/
+            - ./fhem/backup/:/opt/fhem/backup/
+            - ./fhem/data/fhem.cfg:/opt/fhem/fhem.cfg
+            - ./fhem/data/kal_abfall.ics:/opt/fhem/kal_abfall.ics
+            - ./fhem/data/FHEM/controls.txt:/opt/fhem/FHEM/controls.txt
+            - ./fhem/data/FHEM/99_myUtils.pm:/opt/fhem/FHEM/99_myUtils.pm
+            - ./fhem/data/FHEM/hol_nrw.holiday:/opt/fhem/FHEM/hol_nrw.holiday
+            - ./fhem/data/contrib/dblog/db.conf:/opt/fhem/contrib/dblog/db.conf
+            - ./fhem/data/lirc/lircd.conf:/etc/lirc/lircd.conf
+            - ./fhem/data/lirc/hardware.conf:/etc/lirc/hardware.conf
+            - ./fhem/data/lirc/lircrc:/opt/fhem/lircrc
+        networks:
+            - fhem_bridge
+        depends_on:
+            - "mysql"
+            - "sonos"
+#            - "apache2"
+
+############################################################################
+# Service: FHEM Alexa
+############################################################################
+
+# Under Construction:
+
+#    alexa:
+#        container_name: fhem_alxa
+#        restart: always
+#        expose:
+#            - "3000"
+#            - "8282"
+#            - "5353"
+#        ports:
+#            - "3000:3000"
+#            - "8282:8282"
+#            - "5353:5353"
+#        build: fhem_alexa
+#        volumes:
+#            - ./homebridge/entrypoint.sh:/entrypoint.sh
+#            - ./homebridge/config.json:/root/.homebridge/config.json
+#        networks:
+#            - fhem_bridge
+#        depends_on:
+#            - "fhem"
+#            - "apache2"
+
+############################################################################
+# Service: TVheadend mit OSCAM
+############################################################################
+
+# Läuft als privileged damit alle USB-Geräte übergeben werden
+# Leider weiß ich noch nicht wie ich meine zwei SAT USB-Sticks übergebe.
+# Die Treiber werden im Container installiert, dann werden sie erst erkannt.
+
+    tvheadend:
+        container_name: tvheadend
+        restart: always
+        expose:
+            - "9981"
+            - "9982"
+            - "8888"
+        ports:
+            - "9981:9981"
+            - "9982:9982"
+            - "8888:8888"
+        build: tvheadend
+        privileged: true
+#        devices:
+#            - /dev/serial/by-id/usb-Argolis_BV_Smartreader2_plus_HDPLUS-if00-port0:/dev/ttyUSB0
+#            - /dev/???/USB_SAT1:/dev/ttyUSB1
+#            - /dev/???/USB_SAT2:/dev/ttyUSB2
+        volumes:
+            - ./tvheadend/entrypoint.sh:/entrypoint.sh
+            # Oben erstellte TVheadend Volumes in Container übergeben
+            - tvh.config:/config
+            - tvh.recordings:/recordings
+        network_mode: "bridge"

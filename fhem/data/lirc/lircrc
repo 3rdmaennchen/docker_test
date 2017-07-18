@@ -1,0 +1,44 @@
+# Befehl von spezieller Fernbedienung in FHEM übergeben
+
+# /opt/fehm/lircrc
+
+# button: Name der Taster (wie angelernt)
+# prog:   Ziel, wohin die Information übergeben werden soll (Socket oder Programm)
+# config: Übergebener String
+ 
+# Test Fernbedienung
+# KEY_UP
+# KEY_DOWN
+# KEY_LEFT
+# KEY_RIGHT
+# KEY_OK
+
+begin
+    button = KEY_UP
+    prog = fhem
+    config = KEY_UP
+end
+ 
+begin
+    button = KEY_DOWN
+    prog = fhem
+    config = KEY_DOWN
+end
+ 
+begin
+    button = KEY_LEFT
+    prog = fhemnano
+    config = KEY_LEFT
+end
+ 
+begin
+    button = KEY_RIGHT
+    prog = fhem
+    config = KEY_RIGHT
+end
+ 
+begin
+    button = KEY_OK
+    prog = fhem
+    config = KEY_OK
+end
