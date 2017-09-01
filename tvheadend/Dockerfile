@@ -17,16 +17,6 @@ MAINTAINER Erdmaennchen <ich@welt.com>
 
 # Don't install sundtek driver on your host. (Privileged regelt?)
 
-# Ports:
-#  TVheadend
-#    HTTP   9981
-#    HTSP   9982
-#  OSCAM
-#    WebUI  8888
-#    dvbapi 9000    (deleted)
-#    ????   19240   (deleted)
-#    ????   15999   (deleted)
-
 # TVheadend Volume vorher sichern
 
 # Kopiere Container:Volume Zielordner
@@ -58,11 +48,6 @@ MAINTAINER Erdmaennchen <ich@welt.com>
 
 # BackUp-Script für TVheadend volumes erstellen
 
-# USB mounten oder privileged?
-# docker run \
-#--privileged \
-#--device=/dev/dvb/* \
-
 # Privileged aktiviert
 # USB SAT Stick richtig mounten /dev/dvb/adapter*
 # Stick wird auf host nicht erkannt (fehlende Treiber)
@@ -79,15 +64,37 @@ ENV TZ="Europe/Berlin"
 ENV TVH_REL="stable"
 ENV TVH_VER="4.2"
 
-# OSCAM Version
-ENV OSCAM_VER="11384"
+############################################################################
+# Laufwerke (docker volume) erstellen
+############################################################################
+
+# Dockerfile             Docker volume erstellen
+# docker-compose (yml)   Docker volume in container mounten
+
+VOLUME /config /recordings
+
+############################################################################
+# Portfreigabe
+############################################################################
+
+# Ports:
+#  TVheadend
+#    HTTP   9981
+#    HTSP   9982
+#  OSCAM
+#    WebUI  8888
+#    dvbapi 9000    (deleted)
+#    ????   19240   (deleted)
+#    ????   15999   (deleted)
+
+EXPOSE 9981 9982 8888
 
 ############################################################################
 # Update/Install/Zeitzone
 ############################################################################
 
 # Standart Pakete installieren
-ARG PACKAGE="nano wget git-core curl apt-transport-https usbutils net-tools tar"
+ARG PACKAGE="nano wget git-core curl apt-transport-https usbutils net-tools tar xz-utils"
 
 # set version label
 ARG BUILD_DATE
@@ -95,7 +102,7 @@ ARG VERSION
 LABEL build_version="Version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 
 # Develepor Commands
-ARG _clean="rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*"
+ARG _clean="cd / && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*"
 ARG _apt_clean="eval apt-get clean && $_clean"
 ARG _update="eval apt-get update && apt-get upgrade -y --force-yes"
 ARG _install="eval apt-get install -y --force-yes"
@@ -135,7 +142,43 @@ RUN wget http://www.sundtek.de/media/sundtek_netinst.sh && \
 
 # TVheadend Config/Recordings kopieren
 ADD data/config.tar.xz /config
-ADD data/recordings /recordings
+#ADD data/recordings /recordings
+
+# !!! VOLUMES ZUM ERSTEN MAL ERSTELLEN !!!
+# TVheadend Config/Recordings erstellen
+#RUN mkdir /config && \
+#    mkdir /recordings
+
+# Picons kopieren
+#ADD data/picon/snp.tar.xz /config/picon/snp
+#ADD data/picon/srp.tar.xz /config/picon/srp
+
+# Picon in Container kopieren
+# docker cp /home/ich/docker/tvheadend/data/picon/snp.tar.xz tvheadend:/config/picon/snp.tar.xz
+# docker cp /home/ich/docker/tvheadend/data/picon/srp.tar.xz tvheadend:/config/picon/srp.tar.xz
+
+# Picons in Container entpacken
+# tar -xvJf /config/picon/snp.tar.xz -C /config/picon/
+# tar -xvJf /config/picon/srp.tar.xz -C /config/picon/
+
+# Picons-Ordner umbenennen
+# cd /config/picon/
+# mv snp-full.800x450-760x410.light.on.transparent_2017-08-04--07-25-47/ snp/
+# mv srp-full.800x450-760x410.light.on.transparent_2017-08-04--07-25-47/ srp/
+
+# Rechte für Picons-Ordner vergebenS
+# chown -R hts:hts /config/picon
+# chmod -R 755 /config/picon
+
+# TVheadend Einstellungen
+# Picons dem Kanalnamen vorziehen:  true
+# Kanallogo Pfad (SNP):             file:///config/picon/snp/%C.png
+# Kanallogo Namensschema:           Servicename Picon
+# Picon-Pfad (SRP):                 file:///config/picon/srp/
+# Picon Namensschema:               Setze den Typ des Dienstes auf 1
+
+# Aufnahme Einstellungen
+# /recordings Pfad ändern
 
 # hts User/Gruppe/Homeverzeichnis erstellen
 # Gruppen ID    gid: 9981
@@ -161,9 +204,17 @@ RUN $_install \
     subversion \
     libusb-1.0
 
-WORKDIR /tmp/oscam-svn
+# !!! VOLUMES ZUM ERSTEN MAL ERSTELLEN !!!
+# OSCAM Config kopieren /config/oscam/
+# RUN mkdir /config/oscam
+# WORKDIR /config/oscam
+# COPY data/oscam/oscam.conf ./oscam.conf
+# COPY data/oscam/oscam.dvbapi ./oscam.dvbapi
+# COPY data/oscam/oscam.server ./oscam.server
+# COPY data/oscam/oscam.user ./oscam.user
 
 # compile oscam from source
+WORKDIR /tmp/oscam-svn
 RUN svn checkout http://www.streamboard.tv/svn/oscam/trunk /tmp/oscam-svn && \
     ./config.sh \
     --enable all \
@@ -182,7 +233,6 @@ RUN make \
         CONF_DIR=/config/oscam \
         NO_PLUS_TARGET=1 \
         USE_LIBUSB=1
-RUN rm -r /tmp
 
 ############################################################################
 # OSCAM config.sh
@@ -247,21 +297,6 @@ RUN rm -r /tmp
 ############################################################################
 
 RUN $_update && $_apt_clean
-
-############################################################################
-# Laufwerke (docker volume) erstellen
-############################################################################
-
-# Dockerfile    Docker volume erstellen
-# yml           Docker volume in container mounten
-
-VOLUME /config /recordings
-
-############################################################################
-# Portfreigabe
-############################################################################
-
-EXPOSE 9981 9982 8888
 
 ############################################################################
 # Start-Script

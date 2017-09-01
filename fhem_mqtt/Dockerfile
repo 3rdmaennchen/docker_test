@@ -1,5 +1,5 @@
 ############################################################################
-# Debian Jessie
+# apache2 (ReverseProxy/FTP)
 #############################################################################
 
 # Image und Version
@@ -14,86 +14,63 @@ MAINTAINER Erdmaennchen <ich@welt.com>
 # Benutzdefinierte Parameter
 ############################################################################
 
-# Timezone
-ENV TZ="Europe/Berlin"
-
-############################################################################
-# Portfreigabe
-############################################################################
-
-# EXPOSE 1234
-
-############################################################################
-# Laufwerke erstellen (docker volume)
-############################################################################
-
-# Dockerfile             Docker volume erstellen
-# docker-compose (yml)   Docker volume in container mounten
-
-# VOLUME /my_vol
+# MQTT environment variables
+#ENV
 
 ############################################################################
 # Update/Install/Zeitzone
 ############################################################################
-
-# set version label
-ARG BUILD_DATE
-ARG VERSION
-LABEL build_version="Build-date:- ${BUILD_DATE}"
-
-# Develepor Commands
-ARG _clean="cd / && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*"
-ARG _apt_clean="eval apt-get clean && $_clean"
-ARG _update="eval apt-get update && apt-get upgrade -y --force-yes"
-ARG _install="eval apt-get install -y --force-yes"
 
 # Develepor Parameter
 ENV DEBIAN_FRONTEND noninteractive
 ENV TERM xterm
 
 # Updates & Dist-Upgrades installieren
-RUN $_update && \
-apt-get install -y --force-yes --no-install-recommends apt-utils && \
-apt-get dist-upgrade -y --force-yes
+RUN apt-get update && apt-get upgrade -y --force-yes
+RUN apt-get dist-upgrade -y --force-yes && \
+apt-get install -y --force-yes apt-utils
 
 # Standart Pakete installieren
-RUN $_install \
+RUN apt-get -y --force-yes install \
+sudo \
 nano \
 wget \
 git-core \
 curl \
 apt-transport-https \
-usbutils \
+openssh-server \
 net-tools \
 tar \
 xz-utils
 
 # Zeitzone einstellen
-RUN echo ${TZ} > /etc/timezone && dpkg-reconfigure tzdata
-
-# Sprachen generieren und einstellen
-#RUN grep "$LANG" /usr/share/i18n/SUPPORTED >> /etc/locale.gen && locale-gen && \
-#update-locale LANG=$LANG
+RUN echo Europe/Berlin > /etc/timezone && dpkg-reconfigure tzdata
 
 ############################################################################
 # Benutzerdefinierter Code
 ############################################################################
 
-
-
-
-
-
+############################################################################
+# Verzeichnisse Mounten
+############################################################################
 
 ############################################################################
 # CleanUp
 ############################################################################
 
-RUN $_update && $_apt_clean
+RUN apt-get update && apt-get upgrade -y --force-yes
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+############################################################################
+# Portfreigabe
+############################################################################
+
+EXPOSE 1883
 
 ############################################################################
 # Start-Script
 ############################################################################
 
-COPY entrypoint.sh /entrypoint.sh
+ADD entrypoint.sh /entrypoint.sh
 CMD bash /entrypoint.sh

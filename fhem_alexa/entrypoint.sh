@@ -1,8 +1,10 @@
 #!/bin/bash
 
-sleep 15s
-echo "Starte Homebridge nach Wartezeit für FHEM-Update..."
+# Bestehende SSL Zertifikate nutzen
+#ln -s /ssl/live/erdmann-nas.myds.me/privkey.pem /alexa-fhem/privkey.pem && \
+#ln -s /ssl/live/erdmann-nas.myds.me/cert.pem /alexa-fhem/cert.pem && \
 
-/etc/init.d/dbus restart
-service avahi-daemon start
-homebridge
+echo "Warte 20s ..." && \
+sleep 20s && \
+echo "Starte Alexa" && \
+/alexa-fhem/bin/alexa

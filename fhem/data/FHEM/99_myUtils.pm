@@ -9,6 +9,7 @@ package main;
 use strict;
 use warnings;
 use POSIX;
+use DateTime::Format::Strptime;
 
 sub
 myUtils_Initialize($$)
@@ -18,5 +19,22 @@ myUtils_Initialize($$)
 
 # Enter you functions below _this_ line.
 
+##############################################
+# Datum anpassen
+sub RSSFeedTimeToDDMMYY($) {
+    # Sat, 18 Mar 2017 00:00:00 +0100
+    # Mon, 14 Aug 2017 05:00:33 +0000
+
+    # http://search.cpan.org/~drolsky/DateTime-Format-Strptime-1.74/lib/DateTime/Format/Strptime.pm
+
+    my ($rssTime) = @_;
+    my $pattern = "%a, %d %b %Y %H:%M:%S %z";
+
+    my $strp = DateTime::Format::Strptime->new(pattern => $pattern);
+    my $dt = $strp->parse_datetime($rssTime);
+
+    return $dt->dmy('.');
+}
+##############################################
 
 1;

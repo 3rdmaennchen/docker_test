@@ -1,0 +1,22 @@
+{
+    "alexa": {
+        "port": 3000,
+        "name": "Alexa FHEM",
+        "keyFile": "/etc/letsencrypt/live/<website>/privkey.pem",
+        "certFile": "/etc/letsencrypt/live/<website>/cert.pem",
+        "nat-pmp": "",
+        "nat-upnp": false,
+        "applicationId": "amzn1.ask.skill.XXX-XXX-XXX-XXX-XXX",
+        "oauthClientID": "amzn1.application-oa2-client.XXX"
+    },
+    
+    "connections": [
+        {
+            "name": "FHEM",
+            "server": "192.168.X.X",
+            "port": "8090",
+            "webname": "fhem",
+            "filter": "room=alexaRoom"
+        }
+    ]
+}

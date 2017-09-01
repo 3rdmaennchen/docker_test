@@ -8,13 +8,7 @@
 # Ubuntu --> ubuntu:latest
 FROM debian:jessie
 
-MAINTAINER Erdmännchen <ich@welt.com>
-
-############################################################################
-# Info
-#############################################################################
-
-# host
+MAINTAINER Erdmaennchen <ich@welt.com>
 
 ############################################################################
 # Benutzdefinierte Parameter
@@ -27,11 +21,26 @@ ENV TZ="Europe/Berlin"
 ENV FHEM_VERSION 5.8
 
 ############################################################################
+# Laufwerke (docker volume) erstellen
+############################################################################
+
+# Dockerfile             Docker volume erstellen
+# docker-compose (yml)   Docker volume in container mounten
+
+# VOLUME /my_vol
+
+############################################################################
+# Portfreigabe
+############################################################################
+
+# host
+
+############################################################################
 # Update/Install/Zeitzone
 ############################################################################
 
 # Standart Pakete installieren
-ARG PACKAGE="nano wget git-core curl apt-transport-https usbutils net-tools tar"
+ARG PACKAGE="nano wget git-core curl apt-transport-https usbutils net-tools tar xz-utils"
 
 # set version label
 ARG BUILD_DATE
@@ -39,7 +48,7 @@ ARG VERSION
 LABEL build_version="Version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 
 # Develepor Commands
-ARG _clean="rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*"
+ARG _clean="cd / && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*"
 ARG _apt_clean="eval apt-get clean && $_clean"
 ARG _update="eval apt-get update && apt-get upgrade -y --force-yes"
 ARG _install="eval apt-get install -y --force-yes"
@@ -113,6 +122,9 @@ libtext-diff-perl \
 libsoap-lite-perl \
 libxml-parser-lite-perl
 
+# Install für SONOS
+#RUN cpan SOAP::Lite
+
 # Install fhem
 RUN wget https://fhem.de/fhem-${FHEM_VERSION}.deb && dpkg -i fhem-${FHEM_VERSION}.deb
 RUN userdel fhem
@@ -121,11 +133,6 @@ WORKDIR "/opt/fhem"
 
 # Update Config kopieren
 COPY /data/fhem.cfg.update ./fhem.cfg
-
-# Config existiert zu diesem Zeitpunkt noch nicht
-# fhem.cfg für update ändern (Update und Shutdown)
-# RUN echo "define Update notify global:INITIALIZED sleep 2;;update" >> fhem.cfg
-# RUN echo "define Shutdown notify global:UPDATE sleep 2;;shutdown" >> fhem.cfg
 
 # FEHM starten zum Updaten (durch notify in fhem.cfg)
 RUN perl fhem.pl fhem.cfg | tee /opt/fhem/log/fhem.log
@@ -137,14 +144,8 @@ RUN perl fhem.pl fhem.cfg | tee /opt/fhem/log/fhem.log
 RUN $_update && $_apt_clean
 
 ############################################################################
-# Portfreigabe
-############################################################################
-
-# host
-
-############################################################################
 # Start-Script
 ############################################################################
 
-ADD entrypoint.sh /entrypoint.sh
+COPY entrypoint.sh /entrypoint.sh
 CMD bash /entrypoint.sh

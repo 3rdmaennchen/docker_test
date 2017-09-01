@@ -27,7 +27,7 @@ end
  
 begin
     button = KEY_LEFT
-    prog = fhemnano
+    prog = fhem
     config = KEY_LEFT
 end
  

@@ -1,0 +1,30 @@
+[DEFAULT]
+
+# "bantime" is the number of seconds that a host is banned.
+# Banzeit = 1h
+bantime  = 3600
+
+# A host is banned if it has generated "maxretry" during the last "findtime" seconds.
+# Ban = 3x Fehlversuche innerhalb von 10 min
+findtime = 600
+maxretry = 3
+
+# Beim Bannen werden alle Ports geblockt
+# port = 0:65535
+
+# Aktionen beim Bannen --> /etc/fail2ban/action.d/<Name>.conf
+# banaction = <Name der Aktion>
+
+[ssh]
+enabled   = false
+port      = 0:65535
+logpath   = /var/log/auth.log
+maxretry  = 3
+banaction = docker-ban
+
+[apache]
+enabled   = true
+port      = 0:65535
+logpath   = /var/log/apache*/*error.log
+maxretry  = 3
+banaction = docker-ban

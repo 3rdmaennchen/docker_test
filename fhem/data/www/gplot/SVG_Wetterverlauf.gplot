@@ -1,0 +1,20 @@
+# Created by FHEM/98_SVG.pm, 2017-05-29 16:49:54
+set terminal png transparent size <SIZE> crop
+set output '<OUT>.png'
+set xdata time
+set timefmt "%Y-%m-%d_%H:%M:%S"
+set xlabel " "
+set title 'Wetterverlauf'
+set ytics
+set y2tics
+set grid
+set ylabel "Temperatur"
+set y2label "Luftfeuchtigkeit"
+set yrange [-20:40]
+set y2range [0:100]
+
+#WetterFileLog 4:Wetter.temp_c\x3a::
+#WetterFileLog 4:Wetter.humidity\x3a::
+
+plot "<IN>" using 1:2 axes x1y1 title 'Temperatur' ls l0 lw 1 with lines,\
+     "<IN>" using 1:2 axes x1y2 title 'Luftfeuchtigkeit' ls l2 lw 1 with lines
